@@ -1,0 +1,100 @@
+*info.txt* temperature sensors
+" vim: filetype=help foldmethod=marker foldmarker=<<<,>>> modifiable noreadonly tw=0
+" Author: Bas Brugman
+" Website: www.visionnaire.nl
+
+TODO's 
+======
+
+[X] Rename source files and cleanup
+[X] After 10mins of inactivity (no knob movement) -> jump to splash animation to avoid burn-in of oled
+[X] Choose LICENSE and make separate github branch -> MIT License
+
+Information
+===========
+
+Temperature Sensors:
+  4x Texas Instruments TMP275 temp sensors, 12bit, I2C Bus, max 8 sensors addressable on the bus
+Screen:
+  OLED SSD1306 128x64 Adafruit display
+Control:
+ 24 pulse Rotary Encoder with push button  
+
+Resources/References
+--------------------
+
+Adafruit OLED display: https://www.adafruit.com/product/326
+Image(png/jpg) to byte array converter: http://www.majer.ch/lcd/adf_bitmap.php (works)
+Image(png/bmp/jpg) to byte array converter: https://javl.github.io/image2cpp/ (import works, but output not?! usable to check image and import in above tool)
+Github library (C code): https://github.com/lexus2k/ssd1306
+Bigger LCD(7segment) Font Project: http://magictale.com/2459/interfacing-ssd1306-oled-display-with-luminardo/
+Bigger LCD(7segment) Font UTFT.zip file: http://www.rinkydinkelectronics.com/library.php?id=51
+Smaller LCD(7segment) Font/Smooth vertical scrolling library (Arduino C++ code): https://github.com/greiman/SSD1306Ascii
+Smooth vertical scroll hacked adafruit code: https://github.com/RalphBacon/SSD1306-TFT-Screen-I2C-SPI.git
+Github library (C/Arduino C++ code): https://github.com/olikraus/u8g2
+Adafruit library (Arduino C++ code): https://github.com/adafruit/Adafruit_SSD1306
+Adafruit GFX library (Arduino C++ code): https://github.com/adafruit/Adafruit-GFX-Library.git
+
+I2C readout of sensors
+----------------------
+
+12bits are made of 2 bytes:
+
+Byte 1: 1111.1111 (before decimal/8bits, MSB is for negative sign, not using this)
+Byte 2: 1111.0000 (after decimal/only 4bit MSB, always ends with 0000, max resolution is 1/16 -> 0.0625)
+
+Temperature Calculation:
+
+uint16_t temp = ((tmphi<<8)|tmplo)>>4;
+
+Divide this value by 16, the result is saved in a float and copied to a string
+with fprint().
+
+NOTE: Activation of a specific printf library is required in the Makefile:
+
+PRINTF_LIB = $(PRINTF_LIB_FLOAT)
+
+OLED SSD1306 128x64 SPI Hookup
+------------------------------
+
+Fixed (hardware) ports:
+  OLED Gnd -> Ground rail (GND)
+  OLED Vin -> 5V rail (VCC)
+  OLED Data -> MCU SPI MOSI (master in / slave out)
+  OLED Clk -> MCU SPI SCK (clock)
+  OLED CS -> MCU SPI SS (chip/slave select)
+
+"Write only display, so MISO is not used."
+
+Arbitrary chosen ports:
+  OLED Rst -> MCU pin 1 PB0 (reset)
+  OLED DC -> MCU pin 2 PB1 (data/command)
+
+Clock Cycle time is minimum 100ns, which is a maximum SPI speed of 10MHz. (20 MHz crystal on atmega1284p)
+
+DC (D/C) line low -> command mode -> bytes sent are interpreted as commands
+DC (D/C) line high -> display data mode -> bytes sent are interpreted as pixels
+
+Functionality
+-------------
+
+Splash Screen (screen0):
+  Chicken animation/name/version
+  Button push:
+    Reboot device (software reset) -> text "Resetting..."
+
+Temperature Average Display (screen1):
+  One big temperature number (##.# format) 
+  One small Day number (# format)
+  Button push:
+    Toggle between CUR/AVG/MIN/MAX -> small text indicator updates (CUR/AVG/MIN/MAX)
+
+Temperature Graph Display (screen2):
+  AVG temperature graph + number (using cumulative moving average
+  Button push: Capture rate (every second, minute or hour)  -> text "update every second/minute/hour"
+
+Temperature Detailed Display (screen3):
+  Separate 4 real-time temperature numbers
+  Button push: Reset of min/max values -> text "Resetting min/max..."
+
+
